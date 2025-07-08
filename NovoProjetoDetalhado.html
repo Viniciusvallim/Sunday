@@ -24,7 +24,7 @@
   <div class="container">
     <h1>Detalhamento do Projeto</h1>
     <div class="info-projeto" id="info-projeto"></div>
-    <form id="detail-form">
+    <form id="detail-form" autocomplete="off">
       <!-- 1. Iniciação -->
       <section>
         <h2>1. Iniciação do Projeto</h2>
@@ -96,7 +96,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // Configuração Firebase
+    // Protege múltiplas inicializações
     const firebaseConfig = {
       apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
       authDomain: "sunday-a6b04.firebaseapp.com",
@@ -106,10 +106,10 @@
       appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
       databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const database = firebase.database();
 
-    // Pega projetoKey e nome pela URL
+    // Pega projeto da URL
     let projetoKey = '', nomeProjeto = '';
     (function(){
       const params = new URLSearchParams(location.search);
@@ -157,11 +157,13 @@
         cientEncerramento: document.getElementById('cient-encerramento').value,
         criadoEm: new Date().toISOString()
       };
-      // Salva detalhamento do projeto EM projetosDetalhados/<projetoKey>
+      // Salva detalhamento EM projetosDetalhados
       database.ref('projetosDetalhados').push(data)
         .then(() => {
-          // Redireciona para Documentos, pode enviar o key do projeto e nome
           location.href = `Documentos.html?key=${encodeURIComponent(projetoKey)}&project=${encodeURIComponent(nomeProjeto)}`;
+        })
+        .catch(err=>{
+          alert("Erro ao salvar. Tente novamente.\n"+err.message);
         });
     };
   </script>

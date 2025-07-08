@@ -7,12 +7,11 @@
 </head>
 <body>
   <button id="btn">Gerar PDF de Teste</button>
-
   <!-- IMPORTANTE: o jsPDF vem antes do nosso script -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     document.getElementById('btn').addEventListener('click', () => {
-      console.log('clicou no botão');  // deve aparecer no console
+      console.log('clicou no botão'); // deve aparecer no console
       const { jsPDF } = window.jspdf;
       if (!jsPDF) {
         alert('jsPDF não carregou!');

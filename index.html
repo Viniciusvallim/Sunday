@@ -62,9 +62,7 @@
     </nav>
   </aside>
   <main>
-    <h1 class="main-header">
-      Projetos da Equipe
-    </h1>
+    <h1 class="main-header">Projetos da Equipe</h1>
     <div class="header-actions">
       <button onclick="window.location.href='NovoProjeto.html'" class="btn">Novo Projeto</button>
       <button onclick="window.location.href='NovaTarefa.html'" class="btn">Nova Tarefa</button>
@@ -96,13 +94,13 @@
       storageBucket: "sunday-a6b04.appspot.com",
       messagingSenderId: "907213226288",
       appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
-      measurementId: "G-DP2J25WKC3",
       databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
     const database = firebase.database();
 
-    // Formata datas para o padrão brasileiro
     function formatarDataAjustada(d) {
       if (!d) return '';
       try {
@@ -122,50 +120,50 @@
     }
 
     const tbody = document.getElementById('projects-table-body');
-    let projetos = [];
 
-    // Carrega e renderiza a tabela dos projetos do Firebase
-    function renderTable() {
-      database.ref('projetos').once('value', snapshot => {
-        projetos = [];
-        tbody.innerHTML = '';
-        let idx = 0;
-        snapshot.forEach(child => {
-          let p = child.val();
-          p._firebaseKey = child.key;
-          p._idx = idx++;
-          projetos.push(p);
-        });
-        projetos.forEach((p, i) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><a href="pagina_projeto.html?idx=${i}&firebaseKey=${p._firebaseKey}" style="color:#2f4f24; font-weight: 700; text-decoration:none;">${p.nome}</a></td>
-            <td>${p.lider}</td>
-            <td>${formatarDataAjustada(p.inicio)}</td>
-            <td>${formatarData(p.entrega)}</td>
-            <td>${p.coment || ''}</td>
-            <td>
-              <button class="btn-delete" data-key="${p._firebaseKey}" title="Excluir este projeto">Excluir</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-          btn.onclick = function() {
-            const key = btn.dataset.key;
-            if(confirm('Deseja realmente excluir este projeto? Essa ação não pode ser desfeita.')) {
-              database.ref('projetos/'+key).remove().then(() => renderTable());
-              // Para tarefas relacionadas, pode-se apagar aqui também se desejar.
-            }
-          };
-        });
+    // Renderização da tabela
+    function renderTable(snapshot) {
+      tbody.innerHTML = '';
+      let idx = 0;
+      const projetos = [];
+      snapshot.forEach(child => {
+        let p = child.val();
+        p._firebaseKey = child.key;
+        p._idx = idx++;
+        projetos.push(p);
+      });
+      projetos.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <a href="pagina_projeto.html?idx=${i}&firebaseKey=${p._firebaseKey}" 
+            style="color:#2f4f24; font-weight: 700; text-decoration:none;" title="Ver detalhes do projeto ${p.nome}">
+              ${p.nome}
+            </a>
+          </td>
+          <td>${p.lider}</td>
+          <td>${formatarDataAjustada(p.inicio)}</td>
+          <td>${formatarData(p.entrega)}</td>
+          <td>${p.coment || ''}</td>
+          <td>
+            <button class="btn-delete" data-key="${p._firebaseKey}" title="Excluir este projeto">Excluir</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.onclick = function() {
+          const key = btn.dataset.key;
+          if(confirm('Deseja realmente excluir este projeto? Essa ação não pode ser desfeita.')) {
+            database.ref('projetos/'+key).remove();
+            // Não chama renderTable de novo, pois o listener já cobre!
+          }
+        };
       });
     }
-    renderTable();
-    // Opcional: atualizar automaticamente
-    database.ref('projetos').on('value', renderTable);
 
+    // Carrega/atualiza os projetos em tempo real:
+    database.ref('projetos').on('value', renderTable);
   </script>
 </body>
 </html>

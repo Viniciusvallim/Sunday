@@ -34,7 +34,6 @@
       <tbody id="docs-body"></tbody>
     </table>
   </div>
-
   <!-- jsPDF PDF LIB -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- Firebase App (base) -->
@@ -50,63 +49,65 @@
       storageBucket: "sunday-a6b04.appspot.com",
       messagingSenderId: "907213226288",
       appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
-      measurementId: "G-DP2J25WKC3",
       databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
     const database = firebase.database();
 
-    // --- EXIBE NOME DO PROJETO NA INTERFACE ---
+    // --- MOSTRA NOME DO PROJETO ---
     (function(){
       const params = new URLSearchParams(location.search);
       const nome = params.get('project') || '';
       document.getElementById("info-projeto").textContent = nome ? `Projeto: ${nome}` : "";
     })();
 
-    // --- LOAD E RENDERIZAÇÃO ----
-    window.addEventListener('load', () => {
+    // --- CARREGA E RENDERIZA ---
+    function carregarDocumentos() {
       const params = new URLSearchParams(location.search);
       const projetoIdx = params.get('idx');
       const projectName = params.get('project');
       const tbody = document.getElementById('docs-body');
-
-      // Busca no Firebase
-      database.ref('projetosDetalhados').orderByChild('projectName').equalTo(projectName).once('value', snap => {
-        let docs = [];
-        snap.forEach(child => {
-          const d = child.val();
-          if (
-            (!projetoIdx || d.projectIdx === projetoIdx) && // Permite idx vazio ou igual
-            d.projectName === projectName
-          ) {
-            d._firebaseKey = child.key;
-            docs.push(d);
+      database.ref('projetosDetalhados')
+        .orderByChild('projectName')
+        .equalTo(projectName)
+        .once('value', snap => {
+          let docs = [];
+          snap.forEach(child => {
+            const d = child.val();
+            if (
+              (!projetoIdx || d.projectIdx === projetoIdx) && 
+              d.projectName === projectName
+            ) {
+              d._firebaseKey = child.key;
+              docs.push(d);
+            }
+          });
+          tbody.innerHTML = '';
+          if (!docs.length) {
+            tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#888">Nenhum documento.</td></tr>';
+          } else {
+            docs.sort((a,b)=>a.version-b.version)
+              .forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td>${d.projectName} v${d.version}</td>
+                  <td>
+                    <button class="pdf" onclick="generatePDFfromFirebase('${d._firebaseKey}')">Gerar PDF</button>
+                    <button class="del" onclick="excluirDocFirebase('${d._firebaseKey}')">Excluir</button>
+                  </td>`;
+                tbody.appendChild(tr);
+              });
           }
         });
-
-        tbody.innerHTML = '';
-        if (!docs.length) {
-          tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#888">Nenhum documento.</td></tr>';
-        } else {
-          docs.sort((a,b)=>a.version-b.version)
-            .forEach(d => {
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-                <td>${d.projectName} v${d.version}</td>
-                <td>
-                  <button class="pdf" onclick="generatePDFfromFirebase('${d._firebaseKey}')">Gerar PDF</button>
-                  <button class="del" onclick="excluirDocFirebase('${d._firebaseKey}')">Excluir</button>
-                </td>`;
-              tbody.appendChild(tr);
-            });
-        }
-      });
-    });
+    }
+    window.addEventListener('load', carregarDocumentos);
 
     // --- EXCLUIR DOCUMENTO NO FIREBASE ---
     function excluirDocFirebase(key) {
       if (confirm('Excluir este documento?')) {
-        firebase.database().ref('projetosDetalhados/' + key).remove().then(()=>location.reload());
+        firebase.database().ref('projetosDetalhados/' + key).remove().then(carregarDocumentos);
       }
     }
 
@@ -119,7 +120,7 @@
       });
     }
 
-    // --- MESMA LÓGICA DE PDF --- //
+    // --- GERAR PDF ---
     function generatePDFdata(d) {
       const { data, projectName, version } = d;
       const { jsPDF } = window.jspdf;

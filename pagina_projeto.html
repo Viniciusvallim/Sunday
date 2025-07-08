@@ -111,7 +111,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // --- Firebase config and initialization ---
+    // Protege múltiplas inicializações do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
       authDomain: "sunday-a6b04.firebaseapp.com",
@@ -121,10 +121,9 @@
       appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
       databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
     const db = firebase.database();
-
-    // --- Navegação: recebe `key` do projeto via URL
+    
     function abrirNovaTarefa() {
       const key = new URLSearchParams(location.search).get('key');
       window.location.href = `NovaTarefa.html?key=${encodeURIComponent(key)}`;
@@ -153,8 +152,6 @@
       window.location.href =
         `NovoProjetoDetalhado.html?key=${encodeURIComponent(key)}&project=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
     }
-
-    // --- Utilitários ---
     const progressos = [];
     for (let i = 0; i <= 100; i += 10) progressos.push(i);
     const quads = [
@@ -176,8 +173,6 @@
       const d=toDateNoTZ(data);
       return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
     }
-
-    // --- Carregamento do Projeto e Tarefas do Firebase ---
     async function carregarProjetoETarefas() {
       const params = new URLSearchParams(location.search);
       const key = params.get('key');
@@ -185,22 +180,19 @@
         alert('Projeto não identificado');
         return;
       }
-      // Projeto
       const snap = await db.ref('projetos').child(key).once('value');
       const p = snap.val();
       if (!p) {
         alert('Projeto não existe!');
         return;
       }
-      // Tarefas relacionadas
       const tarefasSnap = await db.ref('tarefas').orderByChild('projetoKey').equalTo(key).once('value');
       const tasks = [];
       tarefasSnap.forEach(c => {
         const obj = c.val();
-        obj.__firebaseKey = c.key; // chave para edição/exclusão
+        obj.__firebaseKey = c.key;
         tasks.push(obj);
       });
-      // Montagem da tela
       document.getElementById('proj-titulo').textContent = p.nome;
       document.getElementById('info-nome').textContent = p.nome;
       document.getElementById('info-empresa').textContent = p.empresa||'TECARTS';
@@ -209,7 +201,6 @@
       document.getElementById('info-lider').textContent = p.lider;
       montarGantt(p, tasks);
     }
-
     function getRange(p,tasks){
       const msDay=86400000;
       let start=toDateNoTZ(p.inicio), end=toDateNoTZ(p.entrega);
@@ -300,7 +291,6 @@
       const {start, end} = getRange(p, tasks);
       montarCabecalhosIntegrados(start, end);
       montarCorpoIntegrado(tasks, start, end);
-      // Eventos edição/exclusão/progresso das tarefas já no Firebase
       document.querySelectorAll('.progresso-select').forEach(s=>{
         s.onchange=async ()=>{
           const fkey = s.dataset.fkey;

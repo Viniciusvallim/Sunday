@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* (Seu CSS permanece igual) */
+    /* (Seu CSS completo, permanece igual ao original) */
     :root {
       --verde-escuro: #2f4f24;
       --verde-medio: #3e6d38;
@@ -63,10 +63,14 @@
       .dashboard-card strong{font-size:1.16rem;}
     }
   </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <aside class="sidebar">
     <div class="logo-container">
+      <!-- Mantenha "logo tec.png" junto ao HTML -->
       <img class="logo-img" src="logo tec.png" alt="Tecparts do Brasil" />
       <div class="company-title">Tecparts do Brasil</div>
     </div>
@@ -113,13 +117,8 @@
       <ul class="lista-atividades" id="atividades-recentes"></ul>
     </div>
   </main>
-
-  <!-- Firebase App (base) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <!-- Firebase Database -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // Firebase config
+    // Firebase config e inicialização - certifique-se de inicializar APENAS UMA VEZ por página
     const firebaseConfig = {
       apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
       authDomain: "sunday-a6b04.firebaseapp.com",
@@ -127,10 +126,11 @@
       storageBucket: "sunday-a6b04.appspot.com",
       messagingSenderId: "907213226288",
       appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
-      measurementId: "G-DP2J25WKC3",
       databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
     const database = firebase.database();
 
     // Utils
@@ -145,7 +145,7 @@
     }
     function getStatusProjeto(projeto) {
       const hoje = new Date();
-      if(projeto.status && 
+      if(projeto.status &&
         (projeto.status === 'concluido' || projeto.status.toLowerCase().includes('conclu'))) return 'Concluído';
       let dtFim = new Date(projeto.entrega);
       dtFim.setDate(dtFim.getDate() + 1);
@@ -246,7 +246,7 @@
         renderAtividadesRecentes(projetos);
       });
     }
-    // Carrega
+    // Carrega dashboard do Firebase
     carregarDashboardFirebase();
   </script>
 </body>
