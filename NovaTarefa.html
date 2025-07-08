@@ -86,7 +86,7 @@
       <h1>Nova Tarefa</h1>
       <a href="#" onclick="history.back()">&larr; Voltar</a>
     </div>
-    <form class="form-card" id="nova-tarefa-form">
+    <form class="form-card" id="nova-tarefa-form" autocomplete="off">
       <div class="form-group">
         <label for="projeto">Projeto</label>
         <select id="projeto" name="projeto" required>
@@ -140,75 +140,119 @@
       </div>
     </form>
   </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    function paraISO(dataBR) {
-      if (!dataBR) return "";
-      if (dataBR.includes("-")) return dataBR;
-      const [d, m, a] = dataBR.split("/");
-      return `${a}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-    }
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
+      authDomain: "sunday-a6b04.firebaseapp.com",
+      projectId: "sunday-a6b04",
+      storageBucket: "sunday-a6b04.appspot.com",
+      messagingSenderId: "907213226288",
+      appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
+      measurementId: "G-DP2J25WKC3",
+      databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Helpers para preencher selects
     const selectProj = document.getElementById("projeto");
     const selectResp = document.getElementById("responsavel");
-    const projetos = JSON.parse(localStorage.getItem("projetos")) || [];
-    const colaboradores = JSON.parse(localStorage.getItem("colaboradores")) || [];
-    // Preenche projetos na combo projeto
-    projetos.forEach((p, i) => {
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = p.nome;
-      selectProj.appendChild(opt);
-    });
-    // Preenche colaboradores na combo responsável
-    colaboradores.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c.nome;
-      opt.textContent = c.nome;
-      selectResp.appendChild(opt);
-    });
+    const selectTarefaDep = document.getElementById("tarefaDependente");
     const checkboxDepende = document.getElementById("dependeCheckbox");
     const grupoDependente = document.getElementById("grupoDependente");
-    const selectTarefaDep = document.getElementById("tarefaDependente");
-    // Atualiza lista de tarefas dependentes conforme projeto selecionado
+
+    // Carrega projetos do Firebase
+    function carregarProjetos() {
+      database.ref('projetos').once('value').then(snapshot=>{
+        selectProj.innerHTML = '<option value="">Selecione um projeto...</option>';
+        snapshot.forEach(child=>{
+          const p = child.val();
+          // O value será o firebaseKey
+          const opt = document.createElement("option");
+          opt.value = child.key;
+          opt.textContent = p.nome;
+          selectProj.appendChild(opt);
+        });
+      });
+    }
+
+    // Carrega colaboradores do Firebase
+    function carregarColaboradores() {
+      database.ref('colaboradores').once('value').then(snapshot=>{
+        selectResp.innerHTML = '<option value="">Selecione responsável...</option>';
+        snapshot.forEach(child=>{
+          const c = child.val();
+          const opt = document.createElement("option");
+          opt.value = c.nome;
+          opt.textContent = c.nome;
+          selectResp.appendChild(opt);
+        });
+      });
+    }
+
+    // Carrega tarefas dependentes do projeto selecionado
     selectProj.addEventListener("change", () => {
-      const projIdx = selectProj.value;
+      const projetoKey = selectProj.value;
       selectTarefaDep.innerHTML = '<option value="">-- Selecione --</option>';
-      if (projIdx === "") return;
-      const tarefas = JSON.parse(localStorage.getItem("tarefas")) || [];
-      const tarefasDoProjeto = tarefas.filter(
-        (t) => String(t.projetoIndex) === String(projIdx)
-      );
-      tarefasDoProjeto.forEach((t, i) => {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = t.descricao;
-        selectTarefaDep.appendChild(opt);
+      if (!projetoKey) return;
+      database.ref('tarefas').orderByChild('projetoKey').equalTo(projetoKey).once('value', snap=>{
+        snap.forEach(child=>{
+          const t = child.val();
+          const opt = document.createElement("option");
+          opt.value = child.key;
+          opt.textContent = t.descricao || "(Sem descrição)";
+          selectTarefaDep.appendChild(opt);
+        });
       });
     });
+
     // Mostrar/ocultar select tarefa dependente conforme checkbox
     checkboxDepende.addEventListener("change", () => {
       grupoDependente.style.display = checkboxDepende.checked ? "flex" : "none";
-      if (!checkboxDepende.checked) {
-        selectTarefaDep.value = "";
-      }
+      if (!checkboxDepende.checked) selectTarefaDep.value = "";
     });
+
     window.addEventListener("load", () => {
+      carregarProjetos();
+      carregarColaboradores();
       grupoDependente.style.display = checkboxDepende.checked ? "flex" : "none";
     });
-    document.getElementById("nova-tarefa-form").addEventListener("submit", (e) => {
+
+    // Form submit
+    document.getElementById("nova-tarefa-form").addEventListener("submit", function(e){
       e.preventDefault();
+      const projetoKey = selectProj.value;
+      const etapa = document.getElementById("etapa").value;
+      const descricao = document.getElementById("descricao").value;
+      const responsavel = selectResp.value;
+      const inicio = document.getElementById("inicio").value;
+      const prazo = document.getElementById("prazo").value;
+      const dependeDe = checkboxDepende.checked ? selectTarefaDep.value : null;
+      if(!projetoKey || !etapa || !descricao || !responsavel || !inicio || !prazo) {
+        alert("Preencha todos os campos obrigatórios!");
+        return false;
+      }
+
+      // Cria objeto a ser salvo
       const tarefa = {
-        projetoIndex: selectProj.value,
-        etapa: document.getElementById("etapa").value,
-        descricao: document.getElementById("descricao").value,
-        responsavel: selectResp.value,
-        inicio: paraISO(document.getElementById("inicio").value),
-        prazo: paraISO(document.getElementById("prazo").value),
-        dependeDe: checkboxDepende.checked ? selectTarefaDep.value : null,
+        projetoKey,
+        etapa,
+        descricao,
+        responsavel,
+        inicio,
+        prazo,
+        dependeDe,
+        criadoEm: new Date().toISOString()
       };
-      const todas = JSON.parse(localStorage.getItem("tarefas")) || [];
-      todas.push(tarefa);
-      localStorage.setItem("tarefas", JSON.stringify(todas));
-      window.location.href = "index.html";
+      // Salva no Firebase
+      database.ref('tarefas').push(tarefa).then(()=>{
+        window.location.href = "index.html";
+      });
     });
   </script>
 </body>

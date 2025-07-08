@@ -16,7 +16,7 @@
     th, td { padding: 12px 16px; border-bottom: 1px solid #e0e0e0; text-align: left; }
     th { background:#f3f4f6; font-weight:700; color:#546169; }
     tbody tr:hover { background: #e9f6ef; }
-    #add-colab-form { 
+    #add-colab-form {
       margin-top: 20px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       display: none;
       max-width: 500px;
@@ -40,6 +40,21 @@
       gap: 12px;
       justify-content: flex-end;
     }
+    .btn-delete {
+      background: #dc3545;
+      color: #fff;
+      border-radius: 18px;
+      padding: 6px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.18s;
+      font-size: 0.98rem;
+      margin-left: 12px;
+    }
+    .btn-delete:hover {
+      background: #a72631;
+    }
   </style>
 </head>
 <body>
@@ -49,25 +64,22 @@
   </div>
   <div class="container">
     <button id="show-form-btn" class="btn">Adicionar Colaborador</button>
-
     <form id="add-colab-form">
       <label for="nome">Nome</label>
       <input type="text" id="nome" name="nome" required placeholder="Nome do colaborador" />
-
       <label for="email">E-mail</label>
       <input type="email" id="email" name="email" required placeholder="E-mail do colaborador" />
-
       <div id="form-buttons">
         <button type="submit" class="btn">Salvar</button>
         <button type="button" id="cancel-btn" class="btn" style="background:#dc3545;">Cancelar</button>
       </div>
     </form>
-
     <table>
       <thead>
         <tr>
           <th>Nome</th>
           <th>E-mail</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody id="colaboradores-tbody">
@@ -76,167 +88,65 @@
     </table>
   </div>
 
+  <!-- Firebase App (base) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <!-- Firebase Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // Tenta carregar colaboradores do localStorage ou inicializa com lista padrão
-    let colaboradores = JSON.parse(localStorage.getItem('colaboradores')) || [
-      { nome: "Adjan Marcelo da Silva", email: "adjan.silva@tecpartsbrasil.com" },
-      { nome: "Admilson Pereira Gomes", email: "admilson.gomes@tecpartsbrasil.com" },
-      { nome: "Adriano Simplicio da Silva", email: "adriano.silva@tecpartsbrasil.com" },
-      { nome: "Alex Oliveira Dionisio", email: "alex.dionisio@tecpartsbrasil.com" },
-      { nome: "Alexandre Wesley Barbosa", email: "alexandre.barbosa@tecpartsbrasil.com" },
-      { nome: "André Bombo", email: "andre.bombo@tecpartsbrasil.com" },
-      { nome: "Andre Simioni", email: "andre.simioni@tecpartsbrasil.com" },
-      { nome: "ANTONIO BESSI JUNIOR", email: "antonio.bessi@tecpartsbrasil.com" },
-      { nome: "Antonio Carlos de Souza Junior", email: "antonio.souza@tecpartsbrasil.com" },
-      { nome: "Antonio Carlos Presciliano Ferreira Casimiro", email: "antonio.casimiro@tecpartsbrasil.com" },
-      { nome: "Antonio Junior", email: "contabil@tecpartsbrasil.com" },
-      { nome: "Antonio Marcos Sisoto", email: "marcos.sisoto@tecpartsbrasil.com" },
-      { nome: "Bruno Balsan Bueno", email: "bruno.bueno@tecpartsbrasil.com" },
-      { nome: "Bruno Rodrigues", email: "bruno.rodrigues@tecpartsbrasil.com" },
-      { nome: "Bruno Souza Vicentin", email: "bruno.vicentin@tecpartsbrasil.com" },
-      { nome: "Bruno Vacari Sacilotto", email: "bruno.sacilotto@tecpartsbrasil.com" },
-      { nome: "Camila Rizzi", email: "camila.rizzi@tecpartsbrasil.com" },
-      { nome: "Carlos Bollis", email: "carlos.bollis@tecpartsbrasil.com" },
-      { nome: "Cassio Candido", email: "cassio.candido@tecpartsbrasil.com" },
-      { nome: "Claudeci Bispo de Oliveira", email: "claudeci.oliveira@tecpartsbrasil.com" },
-      { nome: "Claudemir Donizeti Gonçalves da Silva", email: "claudemir.silva@tecpartsbrasil.com" },
-      { nome: "Claudomiro Bispo", email: "claudomiro.bispo@tecpartsbrasil.com" },
-      { nome: "Clovis Silva", email: "seguranca@tecpartsbrasil.com" },
-      { nome: "Cristiane Gobett", email: "cristiane.gobett@tecpartsbrasil.com" },
-      { nome: "Danilo Pinheiro Maciel Alves", email: "danilo.alves@tecpartsbrasil.com" },
-      { nome: "Diego Francisco Cuppi", email: "diego.cuppi@tecpartsbrasil.com" },
-      { nome: "Diego Marques Teixeira", email: "diego.teixeira@tecpartsbrasil.com" },
-      { nome: "Diogenes Teodoro", email: "diogenes.teodoro@tecpartsbrasil.com" },
-      { nome: "Donizete Ferreira da Silva", email: "donizete.silva@tecpartsbrasil.com" },
-      { nome: "Edson Alves", email: "" },
-      { nome: "Elias Júnior", email: "elias.junior@tecpartsbrasil.com" },
-      { nome: "Emerson Wlamir Coelho Oliveira", email: "emerson.oliveira@tecpartsbrasil.com" },
-      { nome: "Ester Marcelino", email: "ester.marcelino@tecpartsbrasil.com" },
-      { nome: "Evanildo Reis de Oliveira", email: "evanildo.oliveira@tecpartsbrasil.com" },
-      { nome: "Felipe Augusto da Silva", email: "felipe.silva@tecpartsbrasil.com" },
-      { nome: "Fernando Caitano Ignacio", email: "fernando.ignacio@tecpartsbrasil.com" },
-      { nome: "Ferramentaria - Tecparts do Brasil", email: "ferramentaria@tecpartsbrasil.com" },
-      { nome: "Flavio Forti", email: "flavio.forti@tecpartsbrasil.com" },
-      { nome: "Francisco Bruno Mariano Gomes", email: "francisco.gomes@tecpartsbrasil.com" },
-      { nome: "Gabriel Braga Silva", email: "gabriel.silva@tecpartsbrasil.com" },
-      { nome: "Gabriela Galindo", email: "gabriela.galindo@tecpartsbrasil.com" },
-      { nome: "Gilson Miguel Morelli Vieira", email: "gilson.vieira@tecpartsbrasil.com" },
-      { nome: "Gustavo Furlan", email: "gustavo.furlan@tecpartsbrasil.com" },
-      { nome: "Gustavo Mengatto", email: "gustavo.mengatto@tecpartsbrasil.com" },
-      { nome: "Henrique Galvao", email: "henrique.galvao@tecpartsbrasil.com" },
-      { nome: "Hermes Malaquias Rato", email: "hermes.rato@tecpartsbrasil.com" },
-      { nome: "Iago Ferreira", email: "iago.ferreira@tecpartsbrasil.com" },
-      { nome: "Inspetor Linha", email: "inspetor.linha@tecpartsbrasil.com" },
-      { nome: "Isaac Moura", email: "isaac.moura@tecpartsbrasil.com" },
-      { nome: "Isaque Mendes Cerimaco", email: "isaque.cerimaco@tecpartsbrasil.com" },
-      { nome: "Jair Francisco Ferreira Antunes", email: "jair.antunes@tecpartsbrasil.com" },
-      { nome: "James Dark", email: "james.dark@tecpartsbrasil.com" },
-      { nome: "Jefferson Baglioni", email: "jefferson.baglioni@tecpartsbrasil.com" },
-      { nome: "João Paulo Orlando", email: "joao.orlando@tecpartsbrasil.com" },
-      { nome: "Joao Vitor Bombo", email: "joao.bombo@tecpartsbrasil.com" },
-      { nome: "José Maria Nunes Junior", email: "jose.junior@tecpartsbrasil.com" },
-      { nome: "Junior Ometto", email: "junior.ometto@tecpartsbrasil.com" },
-      { nome: "Kaio Cruz", email: "kaio.cruz@tecpartsbrasil.com" },
-      { nome: "Kelvin Yuzo Hayakawa", email: "kelvin.hayakawa@tecpartsbrasil.com" },
-      { nome: "Kleber Santos", email: "kleber.santos@tecpartsbrasil.com" },
-      { nome: "Leandro Almeida", email: "leandro.almeida@tecpartsbrasil.com" },
-      { nome: "Leandro Antunes", email: "leandro.antunes@tecpartsbrasil.com" },
-      { nome: "Leandro Barbosa", email: "leandro.barbosa@tecpartsbrasil.com" },
-      { nome: "Leandro de Sousa", email: "leandro.sousa@tecpartsbrasil.com" },
-      { nome: "Leandro Silva", email: "leandro.silva@tecpartsbrasil.com" },
-      { nome: "Leandro Tancredo Vieira", email: "leandro.vieira@tecpartsbrasil.com" },
-      { nome: "Leila Chinelato", email: "leila.chinelato@tecpartsbrasil.com" },
-      { nome: "Leonardo Lage", email: "leonardo.lage@tecpartsbrasil.com" },
-      { nome: "Leonardo Martins do Canto", email: "leonardo.canto@tecpartsbrasil.com" },
-      { nome: "Leonardo Toledo", email: "leonardo.toledo@tecpartsbrasil.com" },
-      { nome: "Loriete Ramos dos Santos", email: "loriete.santos@tecpartsbrasil.com" },
-      { nome: "Lucas Alves da Paixão", email: "lucas.paixao@tecpartsbrasil.com" },
-      { nome: "Lucas Amaro", email: "lucas.amaro@tecpartsbrasil.com" },
-      { nome: "Lucas Mantoan", email: "lucas.mantoan@tecpartsbrasil.com" },
-      { nome: "Luciano Buin", email: "luciano.buin@tecpartsbrasil.com" },
-      { nome: "Luis Alberto Manoel", email: "luis.manoel@tecpartsbrasil.com" },
-      { nome: "Luis Alexandre Bombo", email: "luis.bombo@tecpartsbrasil.com" },
-      { nome: "Luis Brito", email: "luis.brito@tecpartsbrasil.com" },
-      { nome: "Luis Seguin", email: "luis.seguin@tecpartsbrasil.com" },
-      { nome: "Manutenção tecpartsbrasil", email: "manutencao@tecpartsbrasil.com" },
-      { nome: "Marcelo Granziolla", email: "marcelo.granziolla@tecpartsbrasil.com" },
-      { nome: "Marcio Lopes Almeida", email: "marcio.almeida@tecpartsbrasil.com" },
-      { nome: "Marcos Cesar Orlandini", email: "marcos.orlandini@tecpartsbrasil.com" },
-      { nome: "Matheus Nasatto", email: "matheus.nasatto@tecpartsbrasil.com" },
-      { nome: "Matheus Tosato da Cruz", email: "matheus.tosato@tecpartsbrasil.com" },
-      { nome: "Mauricio Silva", email: "mauricio.silva@tecpartsbrasil.com" },
-      { nome: "Milton Stenico", email: "milton.stenico@tecpartsbrasil.com" },
-      { nome: "NATANIEL FRANCISCO DA SILVA JUNIOR", email: "nataniel.junior@tecpartsbrasil.com" },
-      { nome: "Paulo Geovani", email: "paulo.geovani@tecpartsbrasil.com" },
-      { nome: "Paulo Macedo", email: "paulo.macedo@tecpartsbrasil.com" },
-      { nome: "Paulo Rocha", email: "paulo.rocha@tecpartsbrasil.com" },
-      { nome: "Pedro Cruz", email: "pedro.cruz@tecpartsbrasil.com" },
-      { nome: "Qualidade tecpartsbrasil", email: "qualidade@tecpartsbrasil.com" },
-      { nome: "Rafael Cordeiro de Souza", email: "rafael.souza@tecpartsbrasil.com" },
-      { nome: "Rafael Jonathas Bellato da Silva", email: "rafael.silva@tecpartsbrasil.com" },
-      { nome: "Recebimento", email: "recebimento@tecpartsbrasil.com" },
-      { nome: "Renã Ribeiro", email: "rena.ribeiro@tecpartsbrasil.com" },
-      { nome: "Renan Sousa", email: "renan.sousa@tecpartsbrasil.com" },
-      { nome: "Ricardo Bezzerra de Lima Melo", email: "ricardo.melo@tecpartsbrasil.com" },
-      { nome: "Ricardo Lyra do Amaral Santos", email: "ricardo.santos@tecpartsbrasil.com" },
-      { nome: "Rodolfo Mondoni", email: "rodolfo.mondoni@tecpartsbrasil.com" },
-      { nome: "Rodrigo Amaral", email: "rodrigo.amaral@tecpartsbrasil.com" },
-      { nome: "Rodrigo Morelli", email: "rodrigo.morelli@tecpartsbrasil.com" },
-      { nome: "Rosimeri Sanches", email: "fiscal@tecpartsbrasil.com" },
-      { nome: "Samuel José Luiz Alves", email: "samuel.alves@tecpartsbrasil.com" },
-      { nome: "TECPARTS - R.H.", email: "drh@tecpartsbrasil.com" },
-      { nome: "Tecparts tecpartsbrasil", email: "tecparts@tecpartsbrasil.com" },
-      { nome: "Tiago Andrade", email: "tiago.andrade@tecpartsbrasil.com" },
-      { nome: "Tridimencional Zeiss", email: "zeiss@tecpartsbrasil.com" },
-      { nome: "Valmir Rubia da Silva", email: "valmir.silva@tecpartsbrasil.com" },
-      { nome: "Vanessa Bortoletto", email: "vanessa.bortoletto@tecpartsbrasil.com" },
-      { nome: "Vanessa Bortoletto", email: "comercial@tecpartsbrasil.com" },
-      { nome: "Vera Cursi", email: "vera.cursi@tecpartsbrasil.com" },
-      { nome: "Verginia de Araujo", email: "verginia.araujo@tecpartsbrasil.com" },
-      { nome: "Victor de Melo Gimenes", email: "victor.gimenes@tecpartsbrasil.com" },
-      { nome: "Vinicius Vallim de Araujo", email: "vinicius.araujo@tecpartsbrasil.com" },
-      { nome: "Vitor Vallim de Araujo", email: "vitor.araujo@tecpartsbrasil.com" },
-      { nome: "Weber Rodrigues", email: "weber.rodrigues@tecpartsbrasil.com" },
-      { nome: "Wellington Paes dos Santos", email: "wellington.santos@tecpartsbrasil.com" },
-      { nome: "Wellington Teodoro", email: "wellington.teodoro@tecpartsbrasil.com" },
-      { nome: "Weslley Pimenta", email: "weslley.pimenta@tecpartsbrasil.com" },
-      { nome: "Willian Prado", email: "willian.prado@tecpartsbrasil.com" },
-      { nome: "Wilson Adalberto Silva", email: "wilson.silva@tecpartsbrasil.com" }
-    ];
+    // INICIALIZAÇÃO DO FIREBASE
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
+      authDomain: "sunday-a6b04.firebaseapp.com",
+      projectId: "sunday-a6b04",
+      storageBucket: "sunday-a6b04.appspot.com",
+      messagingSenderId: "907213226288",
+      appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
+      measurementId: "G-DP2J25WKC3",
+      databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
     const tbody = document.getElementById('colaboradores-tbody');
     const showFormBtn = document.getElementById('show-form-btn');
     const addColabForm = document.getElementById('add-colab-form');
     const cancelBtn = document.getElementById('cancel-btn');
 
-    // Salva colaboradores no localStorage
-    function salvarNoStorage() {
-      localStorage.setItem('colaboradores', JSON.stringify(colaboradores));
-    }
-
-    // Carrega colaboradores do localStorage
-    function carregarDoStorage() {
-      const dados = localStorage.getItem('colaboradores');
-      if(dados) {
-        colaboradores.length = 0; // limpa array atual
-        colaboradores.push(...JSON.parse(dados));
-      } else {
-        salvarNoStorage();
-      }
-    }
-
-    // Renderiza a lista de colaboradores
-    function renderColaboradores() {
+    // Função para renderizar colaboradores do Firebase
+    function renderColaboradores(snapshot) {
       tbody.innerHTML = '';
+      const colaboradores = [];
+      snapshot.forEach(child => {
+        const colaborador = child.val();
+        colaborador._key = child.key;
+        colaboradores.push(colaborador);
+      });
+      // Ordena por nome (opcional)
+      colaboradores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
       colaboradores.forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${c.nome}</td>
           <td>${c.email || '-'}</td>
+          <td>
+            <button class="btn-delete" data-key="${c._key}">Excluir</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
+      // Ativa os botões de exclusão
+      document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.onclick = function () {
+          const key = btn.getAttribute('data-key');
+          if (confirm('Deseja realmente excluir este colaborador?')) {
+            database.ref('colaboradores/' + key).remove();
+          }
+        }
+      });
     }
+
+    // Atualiza em tempo real quando há mudanças no banco
+    database.ref('colaboradores').on('value', renderColaboradores);
 
     // Mostrar formulário ao clicar no botão
     showFormBtn.addEventListener('click', () => {
@@ -259,24 +169,27 @@
       e.preventDefault();
       const nome = addColabForm.nome.value.trim();
       const email = addColabForm.email.value.trim();
-
       if (!nome || !email) {
         alert('Preencha os dois campos antes de salvar.');
         return;
       }
-      // Adiciona novo colaborador
-      colaboradores.push({ nome, email });
-      salvarNoStorage();
-      renderColaboradores();
-
-      // Reseta e oculta formulário
-      addColabForm.style.display = 'none';
-      showFormBtn.style.display = 'inline-block';
-      addColabForm.reset();
+      // Adiciona novo colaborador ao Firebase
+      database.ref('colaboradores').push({ nome, email }).then(() => {
+        addColabForm.style.display = 'none';
+        showFormBtn.style.display = 'inline-block';
+        addColabForm.reset();
+      });
     });
 
-    carregarDoStorage();
-    renderColaboradores();
+    // Se quiser cadastrar todos os contatos padrão só uma vez:
+    // (descomente a linha abaixo apenas UMA VEZ para popular a base, depois comente novamente!)
+    /*
+    function popularPadrao() {
+      const padrao = [ ... ];
+      padrao.forEach(c => database.ref('colaboradores').push(c));
+    }
+    //popularPadrao();
+    */
   </script>
 </body>
 </html>

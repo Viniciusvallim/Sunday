@@ -107,38 +107,54 @@
       <tbody id="gantt-body"></tbody>
     </table>
   </div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script>
-    // Funções de navegação dos botões - ATUALIZADAS
+    // --- Firebase config and initialization ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
+      authDomain: "sunday-a6b04.firebaseapp.com",
+      projectId: "sunday-a6b04",
+      storageBucket: "sunday-a6b04.appspot.com",
+      messagingSenderId: "907213226288",
+      appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
+      databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- Navegação: recebe `key` do projeto via URL
     function abrirNovaTarefa() {
-      const idx = new URLSearchParams(location.search).get('idx');
-      window.location.href = `NovaTarefa.html?idx=${idx}`;
+      const key = new URLSearchParams(location.search).get('key');
+      window.location.href = `NovaTarefa.html?key=${encodeURIComponent(key)}`;
     }
     function abrirDocumentos() {
       const params = new URLSearchParams(location.search);
-      const idx = params.get('idx');
-      const projs = JSON.parse(localStorage.getItem('projetos')) || [];
-      const p = projs[idx];
-      if (!idx || !p) {
+      const key = params.get('key');
+      const name = params.get('project');
+      const company = params.get('company');
+      if (!key) {
         alert('Projeto não encontrado!');
         return;
       }
       window.location.href =
-        `Documentos.html?idx=${idx}&project=${encodeURIComponent(p.nome)}&company=${encodeURIComponent(p.empresa)}`;
+        `Documentos.html?key=${encodeURIComponent(key)}&project=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
     }
     function abrirGerarDocumento() {
       const params = new URLSearchParams(location.search);
-      const idx = params.get('idx');
-      const projs = JSON.parse(localStorage.getItem('projetos')) || [];
-      const p = projs[idx];
-      if (!idx || !p) {
+      const key = params.get('key');
+      const name = params.get('project');
+      const company = params.get('company');
+      if (!key) {
         alert('Projeto não encontrado!');
         return;
       }
       window.location.href =
-        `NovoProjetoDetalhado.html?idx=${idx}&project=${encodeURIComponent(p.nome)}&company=${encodeURIComponent(p.empresa)}`;
+        `NovoProjetoDetalhado.html?key=${encodeURIComponent(key)}&project=${encodeURIComponent(name)}&company=${encodeURIComponent(company)}`;
     }
 
-    // ---- Código GANTT original segue abaixo sem alteração ----
+    // --- Utilitários ---
     const progressos = [];
     for (let i = 0; i <= 100; i += 10) progressos.push(i);
     const quads = [
@@ -160,23 +176,40 @@
       const d=toDateNoTZ(data);
       return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
     }
-    function carregarProjeto(){
-      const idx=new URLSearchParams(location.search).get('idx');
-      const projs=JSON.parse(localStorage.getItem('projetos'))||[];
-      const all=JSON.parse(localStorage.getItem('tarefas'))||[];
-      const p=projs[idx];
-      document.getElementById('proj-titulo').textContent=p.nome;
-      document.getElementById('info-nome').textContent=p.nome;
-      document.getElementById('info-empresa').textContent=p.empresa||'TECARTS';
-      document.getElementById('info-inicio').textContent=formatarDataBR(p.inicio);
-      document.getElementById('info-fim').textContent=formatarDataBR(p.entrega);
-      document.getElementById('info-lider').textContent=p.lider;
-      return {
-        p,
-        tasks: all.filter(t=>String(t.projetoIndex)===String(idx))
-                  .map((t,i)=>({...t,__idx:i}))
-      };
+
+    // --- Carregamento do Projeto e Tarefas do Firebase ---
+    async function carregarProjetoETarefas() {
+      const params = new URLSearchParams(location.search);
+      const key = params.get('key');
+      if(!key) {
+        alert('Projeto não identificado');
+        return;
+      }
+      // Projeto
+      const snap = await db.ref('projetos').child(key).once('value');
+      const p = snap.val();
+      if (!p) {
+        alert('Projeto não existe!');
+        return;
+      }
+      // Tarefas relacionadas
+      const tarefasSnap = await db.ref('tarefas').orderByChild('projetoKey').equalTo(key).once('value');
+      const tasks = [];
+      tarefasSnap.forEach(c => {
+        const obj = c.val();
+        obj.__firebaseKey = c.key; // chave para edição/exclusão
+        tasks.push(obj);
+      });
+      // Montagem da tela
+      document.getElementById('proj-titulo').textContent = p.nome;
+      document.getElementById('info-nome').textContent = p.nome;
+      document.getElementById('info-empresa').textContent = p.empresa||'TECARTS';
+      document.getElementById('info-inicio').textContent = formatarDataBR(p.inicio);
+      document.getElementById('info-fim').textContent = formatarDataBR(p.entrega);
+      document.getElementById('info-lider').textContent = p.lider;
+      montarGantt(p, tasks);
     }
+
     function getRange(p,tasks){
       const msDay=86400000;
       let start=toDateNoTZ(p.inicio), end=toDateNoTZ(p.entrega);
@@ -188,17 +221,16 @@
     }
     function montarCabecalhosIntegrados(start,end){
       const msDay=86400000;
-      let cur=new Date(start), curM=cur.getMonth(), cnt=0, segs=[], totalDias=0;
-      while(cur<=end){
+      let cur = new Date(start), curM = cur.getMonth(), cnt = 0, segs = [], totalDias = 0;
+      while(cur <= end){
         if(cur.getMonth()===curM) cnt++;
         else { segs.push({m:curM,cnt}); curM=cur.getMonth(); cnt=1; }
-        cur=new Date(cur.getTime()+msDay);
+        cur = new Date(cur.getTime()+msDay);
         totalDias++;
       }
       segs.push({m:curM,cnt});
       let thMeses=`<th colspan="6"></th>`+segs.map(s=>{
-        const name=new Date(2025,s.m,1)
-          .toLocaleString('pt-BR',{month:'long'});
+        const name=new Date(2025,s.m,1).toLocaleString('pt-BR',{month:'long'});
         return `<th colspan="${s.cnt}" class="month">${name}</th>`;
       }).join('');
       cur=new Date(start);
@@ -240,13 +272,13 @@
                 diasDecorr=Math.min(Math.floor((hoje-di)/msDay)+1,diasTotal);
           let row=`
             <td>${t.descricao}</td>
-            <td><select class="progresso-select" data-idx="${t.__idx}">
+            <td><select class="progresso-select" data-fkey="${t.__firebaseKey}">
               ${progressos.map(pct=>`<option value="${pct}"${pct===prog?' selected':''}>${pct}%</option>`).join('')}
             </select></td>
             <td>${t.responsavel}</td>
             <td>
-              <button class="btn-edit" data-idx="${t.__idx}">Editar</button>
-              <button class="btn-delete"data-idx="${t.__idx}">Excluir</button>
+              <button class="btn-edit" data-fkey="${t.__firebaseKey}">Editar</button>
+              <button class="btn-delete" data-fkey="${t.__firebaseKey}">Excluir</button>
             </td>
             <td>${formatarDataBR(t.inicio)}</td>
             <td>${diasTotal}</td>`;
@@ -264,37 +296,39 @@
       });
       document.getElementById('gantt-body').innerHTML=html;
     }
-    function renderGantt(){
-      const {p,tasks}=carregarProjeto();
-      const {start,end}=getRange(p,tasks);
-      montarCabecalhosIntegrados(start,end);
-      montarCorpoIntegrado(tasks,start,end);
-      const all=JSON.parse(localStorage.getItem('tarefas'))||[];
+    function montarGantt(p, tasks){
+      const {start, end} = getRange(p, tasks);
+      montarCabecalhosIntegrados(start, end);
+      montarCorpoIntegrado(tasks, start, end);
+      // Eventos edição/exclusão/progresso das tarefas já no Firebase
       document.querySelectorAll('.progresso-select').forEach(s=>{
-        s.onchange=()=>{
-          all[+s.dataset.idx].progresso=+s.value;
-          localStorage.setItem('tarefas',JSON.stringify(all));
-          renderGantt();
+        s.onchange=async ()=>{
+          const fkey = s.dataset.fkey;
+          if(!fkey) return;
+          const valor = +s.value;
+          await db.ref('tarefas/'+fkey).update({progresso: valor});
+          carregarProjetoETarefas();
         };
       });
       document.querySelectorAll('.btn-delete').forEach(b=>{
-        b.onclick=()=>{
+        b.onclick=async ()=>{
           if(confirm('Deseja realmente excluir esta tarefa?')){
-            const idx=+b.dataset.idx;
-            all.splice(idx,1);
-            localStorage.setItem('tarefas',JSON.stringify(all));
-            renderGantt();
+            const fkey = b.dataset.fkey;
+            if(!fkey) return;
+            await db.ref('tarefas/'+fkey).remove();
+            carregarProjetoETarefas();
           }
         };
       });
       document.querySelectorAll('.btn-edit').forEach(b=>{
         b.onclick=()=>{
-          const projIdx=new URLSearchParams(location.search).get('idx');
-          window.location.href=`NovaTarefa.html?idx=${projIdx}&task=${b.dataset.idx}`;
+          const key = new URLSearchParams(location.search).get('key');
+          const fkey = b.dataset.fkey;
+          window.location.href=`NovaTarefa.html?key=${encodeURIComponent(key)}&task=${encodeURIComponent(fkey)}`;
         };
       });
     }
-    window.onload = renderGantt;
+    window.onload = carregarProjetoETarefas;
   </script>
 </body>
 </html>

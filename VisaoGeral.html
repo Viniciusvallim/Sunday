@@ -21,6 +21,8 @@
     .filter-row { margin-bottom: 20px; }
     input[type="number"] { padding: 6px 8px; font-size: 1rem; border-radius: 6px; border: 1px solid #ccc; width: 80px; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <div class="header">
@@ -53,14 +55,53 @@
     </table>
   </div>
   <script>
-    // Busca o e-mail do colaborador pelo nome
+    // FIREBASE CONFIG — USE O MESMO DO RESTANTE DO SISTEMA
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
+      authDomain: "sunday-a6b04.firebaseapp.com",
+      projectId: "sunday-a6b04",
+      storageBucket: "sunday-a6b04.appspot.com",
+      messagingSenderId: "907213226288",
+      appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
+      databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let projetos = [];
+    let tarefas = [];
+    let colaboradores = [];
+
+    async function carregarTudo() {
+      // pegar projetos
+      const snapshotProj = await db.ref('projetos').once('value');
+      const projetosRaw = snapshotProj.val() || {};
+      projetos = Object.entries(projetosRaw).map(([key, p]) => ({...p, __firebaseKey:key}));
+
+      // pegar tarefas
+      const snapshotTarefas = await db.ref('tarefas').once('value');
+      const tarefasRaw = snapshotTarefas.val() || {};
+      tarefas = Object.entries(tarefasRaw).map(([key, t]) => ({...t, __firebaseKey:key}));
+
+      // pegar colaboradores (email pelo nome)
+      const snapColab = await db.ref('colaboradores').once('value');
+      const colaboradoresRaw = snapColab.val() || {};
+      colaboradores = Object.values(colaboradoresRaw);
+
+      // inicia a visão com filtro default
+      renderAtrasos(7);
+    }
+
     function buscarEmailPorNome(nome) {
-      const colaboradores = JSON.parse(localStorage.getItem('colaboradores')) || [];
-      const c = colaboradores.find(p => p.nome.trim().toLowerCase() === nome.trim().toLowerCase());
+      if (!nome) return "";
+      let n = (nome||'').trim().toLowerCase();
+      const c = colaboradores.find(p =>
+        (p.nome||"").trim().toLowerCase() === n
+      );
       return c ? c.email : "";
     }
 
-    // Função principal para envio dos e-mails
+    // Função para e-mail (igual ao seu original)
     function notificarResponsavel(nomeResp, projeto, tarefa, dataEntrega, diasAtrasados, tarefaDependente, respDependente, statusDependente, diasAtrasoDependente) {
       // CASO 1: Tarefa depende de outra atrasada (bloqueando o andamento)
       if (
@@ -112,15 +153,20 @@
       window.open(`mailto:${email}?subject=${encodeURIComponent(assunto)}&body=${mensagem}`);
     }
 
+    // Funções auxiliares data
     function toDateNoTZ(d) {
       if (!d) return null;
+      if (typeof d === 'number') return new Date(d); // timestamp (caso venha no Firebase)
       if (d instanceof Date) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
       if (typeof d === 'string' && d.includes('/')) {
         const [dd, mm, aaaa] = d.split('/');
         return new Date(Number(aaaa), Number(mm) - 1, Number(dd));
       }
-      let [y, m, day] = d.split('-');
-      return new Date(Number(y), Number(m) - 1, Number(day));
+      if (typeof d === 'string' && d.includes('-')) {
+        let [y, m, day] = d.split('-');
+        return new Date(Number(y), Number(m) - 1, Number(day));
+      }
+      return null;
     }
     function diasAtraso(dataEntrega) {
       const hoje = new Date();
@@ -142,25 +188,25 @@
     }
 
     function renderAtrasos(filtroDias = 7) {
-      const projetos = JSON.parse(localStorage.getItem('projetos')) || [];
-      const tarefas = JSON.parse(localStorage.getItem('tarefas')) || [];
       const tbody = document.getElementById('atrasos-body');
       tbody.innerHTML = '';
+
+      // INDEX das tarefas para dependência/relacionamento
       const tarefasMap = {};
-      tarefas.forEach((t,i) => { tarefasMap[i] = t; });
+      tarefas.forEach(t => { tarefasMap[t.__firebaseKey] = t; });
+
       const linhas = [];
-      projetos.forEach((proj, idxProj) => {
-        const tarefasProjeto = tarefas.filter(t => String(t.projetoIndex) === String(idxProj));
-        tarefasProjeto.forEach((tarefa, idxTarefa) => {
+      projetos.forEach((proj) => {
+        const tarefasProjeto = tarefas.filter(t => t.projetoKey === proj.__firebaseKey);
+        tarefasProjeto.forEach((tarefa) => {
           const atraso = diasAtraso(tarefa.prazo);
           const diasVencendo = diasParaVencer(tarefa.prazo);
-
           // Info da tarefa dependente (se existir) e atraso dela
           let nomeDep = '-';
           let respDep = '-';
           let statusDep = '-';
           let diasAtrasoDependente = 0;
-          if (tarefa.dependeDe !== undefined && tarefa.dependeDe !== null && tarefa.dependeDe !== '') {
+          if (tarefa.dependeDe) {
             const tDep = tarefasMap[tarefa.dependeDe];
             if (tDep) {
               nomeDep = tDep.descricao || '(sem descrição)';
@@ -170,10 +216,9 @@
               diasAtrasoDependente = diasAtraso(tDep.prazo);
             }
           }
-
           if(atraso > 0 || diasVencendo <= filtroDias){
             linhas.push({
-              projeto: proj.nome,
+              projeto: proj.nome || '(Sem nome)',
               tarefa: tarefa.descricao || '(sem descrição)',
               responsavel: tarefa.responsavel || '(não atribuído)',
               dataEntrega: tarefa.prazo ? toDateNoTZ(tarefa.prazo).toLocaleDateString('pt-BR') : '',
@@ -186,16 +231,19 @@
           }
         });
       });
+
       if(linhas.length === 0){
         const tr = document.createElement('tr');
         tr.innerHTML = `<td colspan="9" style="text-align:center; font-weight:bold; color:#22aa41;">Nenhuma tarefa atrasada ou vencendo em até ${filtroDias} dias</td>`;
         tbody.appendChild(tr);
         return;
       }
+
       linhas.sort((a,b) => {
         if(b.diasAtrasados !== a.diasAtrasados) return b.diasAtrasados - a.diasAtrasados;
         return new Date(a.dataEntrega.split('/').reverse().join('-')) - new Date(b.dataEntrega.split('/').reverse().join('-'));
       });
+
       linhas.forEach(l => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -231,7 +279,9 @@
       if(isNaN(filtro) || filtro < 0) return alert('Informe um número válido para dias.');
       renderAtrasos(filtro);
     });
-    renderAtrasos(7);
+
+    // INÍCIO: carrega e exibe visão
+    carregarTudo();
   </script>
 </body>
 </html>

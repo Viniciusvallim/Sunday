@@ -42,6 +42,8 @@
     }
     #btnGerarPdf:hover { background: #4d733a; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -68,7 +70,6 @@
           <input type="text" id="cientesIniciacao" placeholder="Ex: Pedro, Ana">
         </div>
       </fieldset>
-
       <!-- 2. Planejamento -->
       <fieldset>
         <legend>2. Planejamento</legend>
@@ -94,7 +95,6 @@
           <input type="text" id="cientesPlanejamento">
         </div>
       </fieldset>
-
       <!-- 3. Execução & Monitoramento -->
       <fieldset>
         <legend>3. Execução e Monitoramento</legend>
@@ -135,7 +135,6 @@
           <input type="text" id="cientesExecucao">
         </div>
       </fieldset>
-
       <!-- 4. Encerramento -->
       <fieldset>
         <legend>4. Encerramento</legend>
@@ -168,27 +167,65 @@
           <input type="text" id="cientesEncerramento">
         </div>
       </fieldset>
-
       <button type="button" id="btnGerarPdf">Gerar PDF</button>
     </form>
   </div>
-
   <script>
+    // Config Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAkbUo-zQiwTPxVspA2nM35nEXmS4rN5C4",
+      authDomain: "sunday-a6b04.firebaseapp.com",
+      projectId: "sunday-a6b04",
+      storageBucket: "sunday-a6b04.appspot.com",
+      messagingSenderId: "907213226288",
+      appId: "1:907213226288:web:2c9c9fa12a7d76c3b588f5",
+      databaseURL: "https://sunday-a6b04-default-rtdb.firebaseio.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Busca e pré-preenche o formulário, se houver detalhamento salvo
+    window.onload = async function() {
+      const params = new URLSearchParams(location.search);
+      const key = params.get('key');
+      if (!key) return;
+      // Os detalhes são guardados (por convenção) em projetos/<key>/detalhado
+      const snap = await db.ref('projetos/'+key+'/detalhado').once('value');
+      const data = snap.val();
+      if (data) {
+        for (const id in data) {
+          if (document.getElementById(id))
+            document.getElementById(id).value = data[id];
+        }
+      }
+    };
+
+    // Salva (ou atualiza) formulário detalhado no Firebase ao gerar PDF
     const { jsPDF } = window.jspdf;
-    document.getElementById('btnGerarPdf').addEventListener('click', () => {
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    document.getElementById('btnGerarPdf').addEventListener('click', async () => {
       const f = document.getElementById('formProjeto');
+      const fields = Array.from(f.elements).filter(el =>
+        (el.tagName==='INPUT' || el.tagName==='TEXTAREA') && el.id
+      );
+      const dataToSave = {};
+      fields.forEach(el => dataToSave[el.id] = el.value);
+
+      // --- SALVAR NO FIREBASE (projetos/<key>/detalhado) ---
+      const params = new URLSearchParams(location.search);
+      const key = params.get('key');
+      if (key) await db.ref('projetos/' + key + '/detalhado').set(dataToSave);
+
+      // GERAÇÃO DO PDF (identica ao seu original)
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       const W = doc.internal.pageSize.getWidth();
       const margin = 20;
       let y = margin;
-
       function newPageIfNeeded(h) {
         if (y + h > doc.internal.pageSize.getHeight() - margin) {
           doc.addPage();
           y = margin;
         }
       }
-
       function sectionHeader(text) {
         newPageIfNeeded(12);
         doc.setFillColor(228, 241, 219);
@@ -197,7 +234,6 @@
         doc.text(text, margin+2, y+6);
         y += 12;
       }
-
       function printField(label, id) {
         const v = f[id].value.trim();
         if (!v) return;
@@ -208,7 +244,6 @@
         doc.text(lines, margin, y);
         y += lines.length * 7 + 4;
       }
-
       function printSignatures(label, id) {
         const v = f[id].value.trim();
         if (!v) return;
@@ -217,18 +252,16 @@
           newPageIfNeeded(20);
           doc.setFontSize(11).setFont('helvetica','bold').setTextColor(47,79,36);
           doc.text(`${label} — ${name}`, margin, y);
-          y += 8;               // espaço antes da linha
+          y += 8; // espaço antes da linha
           doc.setDrawColor(180);
           doc.line(margin, y, margin+100, y);
-          y += 12;              // espaço abaixo da linha
+          y += 12; // espaço abaixo da linha
         });
       }
-
       // Cabeçalho
       doc.setFontSize(18).setFont('helvetica','bold').setTextColor(47,79,36);
       doc.text('Documento Detalhado do Projeto', margin, y);
       y += 14;
-
       // 1. Iniciação
       sectionHeader('1. Iniciação do Projeto');
       printField('TAP', 'tap');
@@ -237,7 +270,6 @@
       printSignatures('Assinatura Resp.', 'respIniciacao');
       printField('Cientes', 'cientesIniciacao');
       printSignatures('Assinatura Ciente', 'cientesIniciacao');
-
       // 2. Planejamento
       sectionHeader('2. Planejamento');
       printField('Plano de Gerenciamento do Projeto', 'planoGerenciamento');
@@ -254,7 +286,6 @@
       printSignatures('Assinatura Resp.', 'respPlanejamento');
       printField('Cientes', 'cientesPlanejamento');
       printSignatures('Assinatura Ciente', 'cientesPlanejamento');
-
       // 3. Execução & Monitoramento
       sectionHeader('3. Execução e Monitoramento');
       printField('Registro de Riscos', 'registroRiscos');
@@ -268,7 +299,6 @@
       printSignatures('Assinatura Resp.', 'respExecucao');
       printField('Cientes', 'cientesExecucao');
       printSignatures('Assinatura Ciente', 'cientesExecucao');
-
       // 4. Encerramento
       sectionHeader('4. Encerramento');
       printField('Termo de Encerramento', 'termoEncerramento');
@@ -280,7 +310,6 @@
       printSignatures('Assinatura Resp.', 'respEncerramento');
       printField('Cientes', 'cientesEncerramento');
       printSignatures('Assinatura Ciente', 'cientesEncerramento');
-
       doc.save('Projeto_Detalhado_Tecparts.pdf');
     });
   </script>
