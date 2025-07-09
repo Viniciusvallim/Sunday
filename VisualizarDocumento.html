@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Visualizar Documento | Tecparts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f7f8fa;color:#224a2e;}
+    .header{display:flex;justify-content:space-between;align-items:center;padding:16px;background:#236481;color:#fff;}
+    .header button{background:#fff;color:#236481;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;}
+    .container{max-width:800px;margin:24px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+    .field{margin-bottom:12px;}
+    .field .label{font-weight:600;}
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Visualizar Documento</h1>
+    <button onclick="voltar()">Voltar</button>
+  </div>
+
+  <div class="container" id="fields">
+    <!-- campos preenchidos aparecerão aqui -->
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const id     = Number(params.get('id'));
+    const idx    = params.get('idx');
+    let all      = JSON.parse(localStorage.getItem('projetosDetalhados')||'[]');
+    const obj    = all.find(d=>d.id===id);
+    if (!obj) {
+      document.body.innerHTML = '<p style="padding:20px;color:red;">Documento não encontrado.</p>';
+      throw new Error('Documento não encontrado');
+    }
+    const data = obj.data;
+    const container = document.getElementById('fields');
+    Object.entries(data).forEach(([k,v])=>{
+      const div = document.createElement('div');
+      div.className = 'field';
+      div.innerHTML = `<span class="label">${k.replace(/([A-Z])/g,' $1')}:</span> ${v}`;
+      container.appendChild(div);
+    });
+
+    function voltar(){
+      location.href = `Documentos.html?idx=${encodeURIComponent(idx)}`;
+    }
+  </script>
+</body>
+</html>

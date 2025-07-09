@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Novo Projeto Detalhado | Tecparts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    body{margin:0;font-family:'Inter',Arial,sans-serif;background:#f7f4f0;color:#224a2e;}
+    .container{max-width:800px;margin:40px auto;padding:20px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+    h1{text-align:center;font-size:1.8rem;font-weight:800;color:#236481;margin-bottom:20px;}
+    form section{margin-bottom:24px;}
+    form h2{background:#e6f2fa;padding:6px 12px;border-radius:6px;font-size:1.3rem;font-weight:600;color:#236481;margin-bottom:12px;}
+    label{display:block;margin:12px 0 4px;font-weight:600;}
+    textarea,input[type="text"]{width:100%;padding:8px;font-size:1rem;border:1px solid #dde2ea;border-radius:6px;background:#fafafa;box-sizing:border-box;}
+    textarea{resize:vertical;min-height:48px;}
+    #btn-generate{display:block;margin:20px auto 0;padding:12px 28px;font-size:1rem;font-weight:600;border:none;border-radius:24px;background:#398e5b;color:#fff;cursor:pointer;}
+    #btn-generate:hover{background:#236481;}
+    .info-projeto{background:#edf6ff;padding:8px 16px;border-radius:6px;font-size:1.02rem;margin-bottom:12px;}
+    small { color:#138; font-size: .9em;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Detalhamento do Projeto</h1>
+    <div class="info-projeto" id="info-projeto"></div>
+    <form id="detail-form">
+      <!-- 1. Iniciação -->
+      <section>
+        <h2>1. Iniciação do Projeto</h2>
+        <label for="tap">TAP (Termo de Abertura)</label>
+        <textarea id="tap" required></textarea>
+        <label for="stakeholders">Registro das Partes Interessadas</label>
+        <textarea id="stakeholders" required></textarea>
+        <label for="resp-iniciacao">Responsáveis <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="resp-iniciacao" required/>
+        <label for="cient-iniciacao">Cientes <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="cient-iniciacao" required/>
+      </section>
+      <!-- 2. Planejamento -->
+      <section>
+        <h2>2. Planejamento</h2>
+        <label for="plano-mestre">Plano de Gerenciamento</label>
+        <textarea id="plano-mestre" required></textarea>
+        <label for="planos-subsidiarios">Planos Subsidiários</label>
+        <textarea id="planos-subsidiarios" required></textarea>
+        <label for="outros-planejamento">Outros Docs (EAP, RACI…)</label>
+        <textarea id="outros-planejamento" required></textarea>
+        <label for="resp-planejamento">Responsáveis <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="resp-planejamento" required/>
+        <label for="cient-planejamento">Cientes <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="cient-planejamento" required/>
+      </section>
+      <!-- 3. Execução & Monitoramento -->
+      <section>
+        <h2>3. Execução e Monitoramento</h2>
+        <label for="reg-riscos">Registro de Riscos</label>
+        <textarea id="reg-riscos" required></textarea>
+        <label for="reg-issues">Issues Log</label>
+        <textarea id="reg-issues" required></textarea>
+        <label for="reg-changes">Change Log</label>
+        <textarea id="reg-changes" required></textarea>
+        <label for="rel-status">Relatórios de Status</label>
+        <textarea id="rel-status" required></textarea>
+        <label for="painel-kpis">Painel de KPIs</label>
+        <textarea id="painel-kpis" required></textarea>
+        <label for="plano-comunic">Plano de Comunicação</label>
+        <textarea id="plano-comunic" required></textarea>
+        <label for="resp-execucao">Responsáveis <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="resp-execucao" required/>
+        <label for="cient-execucao">Cientes <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="cient-execucao" required/>
+      </section>
+      <!-- 4. Encerramento -->
+      <section>
+        <h2>4. Encerramento</h2>
+        <label for="termo-encerramento">Termo de Encerramento</label>
+        <textarea id="termo-encerramento" required></textarea>
+        <label for="rel-final">Relatório Final</label>
+        <textarea id="rel-final" required></textarea>
+        <label for="licoes-aprendidas">Lições Aprendidas</label>
+        <textarea id="licoes-aprendidas" required></textarea>
+        <label for="doc-aceite">Documentação de Aceite</label>
+        <textarea id="doc-aceite" required></textarea>
+        <label for="plano-transicao">Plano de Transição</label>
+        <textarea id="plano-transicao" required></textarea>
+        <label for="resp-encerramento">Responsáveis <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="resp-encerramento" required/>
+        <label for="cient-encerramento">Cientes <small>(Separe vários por vírgula)</small></label>
+        <input type="text" id="cient-encerramento" required/>
+      </section>
+      <button id="btn-generate" type="submit">Gerar Documento</button>
+    </form>
+  </div>
+  <script>
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const idx = params.get('idx');
+      const nome = params.get('project') || '';
+      if(idx && nome){
+        document.getElementById("info-projeto").textContent = `Projeto: ${nome}`;
+      } else {
+        document.getElementById("info-projeto").textContent = "⚠️ Atenção: projeto não identificado! Volte pela tela correta.";
+      }
+    })();
+
+    document.getElementById('detail-form').onsubmit = function(event) {
+      event.preventDefault();
+      const params = new URLSearchParams(location.search);
+      const projetoIdx = params.get('idx') || '';
+      const projectName = params.get('project') || '';
+      if (!projetoIdx || !projectName) {
+        alert("Não foi possível identificar o projeto. Volte e acesse a tela corretamente.");
+        return;
+      }
+      const data = {
+        tap: document.getElementById('tap').value,
+        stakeholders: document.getElementById('stakeholders').value,
+        respIniciacao: document.getElementById('resp-iniciacao').value,
+        cientIniciacao: document.getElementById('cient-iniciacao').value,
+        planoMestre: document.getElementById('plano-mestre').value,
+        planosSubsidiarios: document.getElementById('planos-subsidiarios').value,
+        outrosPlanejamento: document.getElementById('outros-planejamento').value,
+        respPlanejamento: document.getElementById('resp-planejamento').value,
+        cientPlanejamento: document.getElementById('cient-planejamento').value,
+        regRiscos: document.getElementById('reg-riscos').value,
+        regIssues: document.getElementById('reg-issues').value,
+        regChanges: document.getElementById('reg-changes').value,
+        relStatus: document.getElementById('rel-status').value,
+        painelKpis: document.getElementById('painel-kpis').value,
+        planoComunicacao: document.getElementById('plano-comunic').value,
+        respExecucao: document.getElementById('resp-execucao').value,
+        cientExecucao: document.getElementById('cient-execucao').value,
+        termoEncerramento: document.getElementById('termo-encerramento').value,
+        relFinal: document.getElementById('rel-final').value,
+        licoesAprendidas: document.getElementById('licoes-aprendidas').value,
+        docAceite: document.getElementById('doc-aceite').value,
+        planoTransicao: document.getElementById('plano-transicao').value,
+        respEncerramento: document.getElementById('resp-encerramento').value,
+        cientEncerramento: document.getElementById('cient-encerramento').value
+      };
+      const all = JSON.parse(localStorage.getItem('projetosDetalhados') || '[]');
+      const version = all.filter(d => d.projectIdx === projetoIdx && d.projectName === projectName).length + 1;
+      const id = Date.now();
+      all.push({ id, projectIdx: projetoIdx, projectName, version, data });
+      localStorage.setItem('projetosDetalhados', JSON.stringify(all));
+      location.href =
+        `Documentos.html?idx=${encodeURIComponent(projetoIdx)}` +
+        `&project=${encodeURIComponent(projectName)}`;
+    };
+  </script>
+</body>
+</html>
